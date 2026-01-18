@@ -67,24 +67,30 @@ jobs:
       run: |
         gdown --fuzzy -O ${{ github.event.inputs.target_file }} ${{ github.event.inputs.file_link }}
 
-    # 🔵 ORIGINAL ANALYSIS STEP (UNCHANGED)
+    # 🔵 ORIGINAL ANALYSIS STEP
     - name: Run IDA Pro Headless Analysis
       run: |
         $HOME/idapro-9.0/idat64 -P+ -A -S"analyse.idc" ${{ github.event.inputs.target_file }}
 
-    # 🟢 NEW: dump .data AFTER analysis
+    # 🟢 Dump .data
     - name: Dump .data from IDA database
       run: |
         $HOME/idapro-9.0/idat64 -P+ -A -S"dump_data.py" ${{ github.event.inputs.target_file }}.i64
 
-    # 🟢 NEW: zip both outputs
+    # 🟢 Dump function start addresses
+    - name: Dump function start addresses
+      run: |
+        $HOME/idapro-9.0/idat64 -P+ -A -S"dump_funcs.py" ${{ github.event.inputs.target_file }}.i64
+
+    # 🟢 ONE zip containing everything
     - name: Zip analysis outputs
       run: |
         zip analysis_output.zip \
           ${{ github.event.inputs.target_file }}.i64 \
-          data_dump.bin
+          data_dump.bin \
+          func_addrs.txt
 
-    # 🟢 NEW: upload single zip
+    # 🟢 Upload artifact
     - name: Upload analysis zip
       uses: actions/upload-artifact@v4
       with:
