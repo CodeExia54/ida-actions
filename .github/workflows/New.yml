@@ -1,4 +1,4 @@
-name: IDA Analysis with Data Dump
+name: IDA Dump .data
 
 on:
   workflow_dispatch:
@@ -24,24 +24,24 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v4
 
-    - name: Install System Dependencies
+    - name: Install Dependencies
       run: |
         sudo apt update
-        sudo apt install -y python3 python3-pip pipx
+        sudo apt -y install python3 python3-pip pipx
         pipx install gdown
         pipx ensurepath
         source ~/.profile
 
-    - name: Download IDA Installer
+    - name: Download IDA Pro Installer
       run: |
-        gdown -O idapro.run ${{ github.event.inputs.installer_link }}
+        gdown -O idapro_90_x64linux.run ${{ github.event.inputs.installer_link }}
 
     - name: Install IDA Pro
       run: |
-        chmod +x idapro.run
-        ./idapro.run --mode unattended
+        chmod +x idapro_90_x64linux.run
+        ./idapro_90_x64linux.run --mode unattended
 
-    - name: Patch IDA Pro (License)
+    - name: Patch IDA Pro
       run: |
         cp $HOME/idapro-9.0/libida.so .
         cp $HOME/idapro-9.0/libida64.so .
@@ -49,8 +49,9 @@ jobs:
         mv libida.so.patched $HOME/idapro-9.0/libida.so
         mv libida64.so.patched $HOME/idapro-9.0/libida64.so
         mv ida.hexlic $HOME/.idapro/
+        rm libida.so libida64.so
 
-    - name: Setup IDA Python
+    - name: Setup IDA Pro
       run: |
         pip install $HOME/idapro-9.0/idalib/python
         python3 $HOME/idapro-9.0/idalib/python/py-activate-idalib.py
@@ -60,7 +61,7 @@ jobs:
       run: |
         gdown --fuzzy -O ${{ github.event.inputs.target_file }} ${{ github.event.inputs.file_link }}
 
-    - name: Run IDA Headless + Dump .data
+    - name: Run IDA Headless and Dump .data
       run: |
         $HOME/idapro-9.0/idat64 \
           -P+ \
@@ -68,16 +69,9 @@ jobs:
           -S"dump_data.py" \
           ${{ github.event.inputs.target_file }}
 
-    - name: Upload IDA Database
-      uses: actions/upload-artifact@v4
-      with:
-        name: ida-database
-        path: ${{ github.event.inputs.target_file }}.i64
-        compression-level: 9
-
     - name: Upload .data Dump
       uses: actions/upload-artifact@v4
       with:
         name: data-dump
-        path: libtersafe_data.bin
+        path: data_dump.bin
         compression-level: 9
