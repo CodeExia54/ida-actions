@@ -1,4 +1,4 @@
-name: IDA Analysis data
+name: IDA Analysis
 
 on:
   workflow_dispatch:
@@ -33,7 +33,7 @@ jobs:
     - name: Install Dependencies
       run: |
         sudo apt update
-        sudo apt -y install python3 python3-pip pipx
+        sudo apt -y install python3 python3-pip pipx zip
         pipx install gdown
         pipx ensurepath
         source ~/.profile
@@ -67,30 +67,27 @@ jobs:
       run: |
         gdown --fuzzy -O ${{ github.event.inputs.target_file }} ${{ github.event.inputs.file_link }}
 
-    # ✅ ORIGINAL ANALYSIS (UNCHANGED)
+    # 🔵 ORIGINAL ANALYSIS STEP (UNCHANGED)
     - name: Run IDA Pro Headless Analysis
       run: |
         $HOME/idapro-9.0/idat64 -P+ -A -S"analyse.idc" ${{ github.event.inputs.target_file }}
 
-    # ✅ NEW: dump .data FROM THE ANALYZED DATABASE
+    # 🟢 NEW: dump .data AFTER analysis
     - name: Dump .data from IDA database
       run: |
-        $HOME/idapro-9.0/idat64 \
-          -P+ \
-          -A \
-          -S"dump_data.py" \
-          ${{ github.event.inputs.target_file }}.i64
+        $HOME/idapro-9.0/idat64 -P+ -A -S"dump_data.py" ${{ github.event.inputs.target_file }}.i64
 
-    - name: Upload Analysed Database
+    # 🟢 NEW: zip both outputs
+    - name: Zip analysis outputs
+      run: |
+        zip analysis_output.zip \
+          ${{ github.event.inputs.target_file }}.i64 \
+          data_dump.bin
+
+    # 🟢 NEW: upload single zip
+    - name: Upload analysis zip
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ github.event.inputs.target_file }}-Database
-        path: ${{ github.event.inputs.target_file }}.i64
-        compression-level: 9
-
-    - name: Upload .data dump
-      uses: actions/upload-artifact@v4
-      with:
-        name: data-dump
-        path: data_dump.bin
+        name: ${{ github.event.inputs.target_file }}-analysis
+        path: analysis_output.zip
         compression-level: 9
