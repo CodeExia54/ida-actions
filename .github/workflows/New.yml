@@ -1,4 +1,4 @@
-name: IDA Analysis (with logs)
+name: IDA Analysis (Show Logs)
 
 on:
   workflow_dispatch:
@@ -62,8 +62,8 @@ jobs:
       run: |
         gdown --fuzzy -O ${{ github.event.inputs.target_file }} ${{ github.event.inputs.file_link }}
 
-    # 🔵 ORIGINAL ANALYSIS (LOGGED)
-    - name: Run IDA Pro Headless Analysis (log enabled)
+    # 🔵 STEP 1: IDA ANALYSIS WITH LOG
+    - name: Run IDA Analysis (log enabled)
       run: |
         $HOME/idapro-9.0/idat64 \
           -P+ \
@@ -72,8 +72,8 @@ jobs:
           -S"analyse.idc" \
           ${{ github.event.inputs.target_file }}
 
-    # 🟢 POST-ANALYSIS SCRIPT (LOGGED)
-    - name: Run dump script with logging
+    # 🟢 STEP 2: RUN DUMP SCRIPT WITH LOG
+    - name: Run dump_funcs.py (log enabled)
       run: |
         $HOME/idapro-9.0/idat64 \
           -P+ \
@@ -82,28 +82,30 @@ jobs:
           -S"dump_funcs.py" \
           ${{ github.event.inputs.target_file }}.i64
 
-    # 🟡 PRINT LOGS TO ACTIONS OUTPUT
+    # 🟡 STEP 3: PRINT LOGS TO GITHUB UI
     - name: Show IDA analysis log
       run: |
         echo "========== IDA ANALYSIS LOG =========="
+        ls -l ida_analysis.log || true
         sed -n '1,200p' ida_analysis.log || true
 
     - name: Show IDA dump log
       run: |
         echo "========== IDA DUMP LOG =========="
+        ls -l ida_dump.log || true
         sed -n '1,200p' ida_dump.log || true
 
-    # 🟢 ZIP OUTPUTS
+    # 🟢 STEP 4: ZIP OUTPUTS + LOGS
     - name: Zip outputs
       run: |
         zip analysis_output.zip \
           ${{ github.event.inputs.target_file }}.i64 \
-          data_dump.bin \
           ida_analysis.log \
-          ida_dump.log || true
+          ida_dump.log \
+          data_dump.bin || true
 
-    # 🟢 UPLOAD ZIP
-    - name: Upload analysis zip
+    # 🟢 STEP 5: UPLOAD ZIP
+    - name: Upload analysis bundle
       uses: actions/upload-artifact@v4
       with:
         name: ${{ github.event.inputs.target_file }}-analysis
