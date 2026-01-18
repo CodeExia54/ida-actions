@@ -1,4 +1,4 @@
-name: IDA Dump .data
+name: IDA Analysis data
 
 on:
   workflow_dispatch:
@@ -11,10 +11,16 @@ on:
         description: "GDrive link of the file"
         required: true
         type: string
+      generate_c:
+        description: "Generate C pseudocode"
+        required: false
+        type: boolean
+        default: false
       installer_link:
         description: "GDrive link of the installer"
-        required: true
+        required: false
         type: string
+        default: 1zXAhAcXvWe6TRagdjMKwI4_HF_bgH-Lo
 
 jobs:
   ida_analysis:
@@ -57,19 +63,32 @@ jobs:
         python3 $HOME/idapro-9.0/idalib/python/py-activate-idalib.py
         python3 ida90_eula.py
 
-    - name: Download Target File
+    - name: Download File for Analysis
       run: |
         gdown --fuzzy -O ${{ github.event.inputs.target_file }} ${{ github.event.inputs.file_link }}
 
-    - name: Run IDA Headless and Dump .data
+    # ✅ ORIGINAL ANALYSIS (UNCHANGED)
+    - name: Run IDA Pro Headless Analysis
+      run: |
+        $HOME/idapro-9.0/idat64 -P+ -A -S"analyse.idc" ${{ github.event.inputs.target_file }}
+
+    # ✅ NEW: dump .data FROM THE ANALYZED DATABASE
+    - name: Dump .data from IDA database
       run: |
         $HOME/idapro-9.0/idat64 \
           -P+ \
           -A \
           -S"dump_data.py" \
-          ${{ github.event.inputs.target_file }}
+          ${{ github.event.inputs.target_file }}.i64
 
-    - name: Upload .data Dump
+    - name: Upload Analysed Database
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ github.event.inputs.target_file }}-Database
+        path: ${{ github.event.inputs.target_file }}.i64
+        compression-level: 9
+
+    - name: Upload .data dump
       uses: actions/upload-artifact@v4
       with:
         name: data-dump
